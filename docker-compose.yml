@@ -1,0 +1,19 @@
+version: '3'
+services:
+    afterlogic:
+      image: ssiu/afterlogic-lite:8.2.11
+      build:
+        context: ./build
+      volumes:
+        - ./data/mysqldata:/var/lib/mysql
+      restart: always
+      environment:
+        - TZ=${TZ}
+        - MYSQL_ROOT_PASSWORD=${DBROOT}
+        - MYSQL_DATABASE=${DBNAME}
+        - MYSQL_USER=${DBUSER}
+        - MYSQL_PASSWORD=${DBPASS}
+      ports:
+        - "${SQL_PORT:-127.0.0.1:23306}:3306"
+        - "${HTTP_PORT:-0.0.0.0:20080}:80"
+        - "${HTTPS_PORT:-0.0.0.0:20443}:443"
