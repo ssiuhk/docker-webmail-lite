@@ -1,19 +1,54 @@
 version: '3'
 services:
-    afterlogic:
-      image: ssiu/afterlogic-lite:8.2.11
-      build:
-        context: ./build
-      volumes:
-        - ./data/mysqldata:/var/lib/mysql
-      restart: always
-      environment:
-        - TZ=${TZ}
-        - MYSQL_ROOT_PASSWORD=${DBROOT}
-        - MYSQL_DATABASE=${DBNAME}
-        - MYSQL_USER=${DBUSER}
-        - MYSQL_PASSWORD=${DBPASS}
-      ports:
-        - "${SQL_PORT:-127.0.0.1:23306}:3306"
-        - "${HTTP_PORT:-0.0.0.0:20080}:80"
-        - "${HTTPS_PORT:-0.0.0.0:20443}:443"
+  app:
+    container_name: afterlogic-app
+    image: ssiu/afterlogic-lite:8.2.11
+    build:
+      context: ./build
+    restart: always
+    depends_on:
+      - "db"
+    environment:
+      - PHP_UPLOAD_MAX_FILESIZE=64M
+      - PHP_POST_MAX_SIZE=128M
+      - MYSQL_ROOT_PASSWORD=CHANGE_ME
+    volumes:
+      - ./data/conf/config.json:/var/www/html/data/settings/config.json
+#      - /etc/letsencrypt/live/webmail.example.com/fullchain.pem:/etc/ssl/certs/webmail_cert.pem:ro
+#      - /etc/letsencrypt/live/webmail.example.com/privkey.pem:/etc/ssl/private/webmail_key.key:ro
+    networks:
+      afterlogic-network:
+        ipv4_address: ${IPV4_NETWORK:-172.23.19}.28
+        aliases:
+          - afterlogic-app
+    ports:
+      - "${HTTP_PORT:-0.0.0.0:20080}:80"
+      - "${HTTPS_PORT:-0.0.0.0:20443}:443"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+  db:
+    container_name: afterlogic-db
+    image: mariadb:10.3-bionic
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=CHANGE_ME
+    volumes:
+      - ./data/mysqldata:/var/lib/mysql
+    networks:
+      afterlogic-network:
+        ipv4_address: ${IPV4_NETWORK:-172.23.19}.29
+        aliases:
+          - afterlogic-db
+    ports:
+      - "${SQL_PORT:-127.0.0.1:23306}:3306"
+networks:
+  afterlogic-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: ${IPV4_NETWORK:-172.23.19}.0/24
+
